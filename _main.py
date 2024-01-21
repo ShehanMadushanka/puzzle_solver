@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import scrolledtext, Button
-import _test_driver as td
+import _automation as td
 
 def solve_puzzle():
     # solution = td.solution_path
