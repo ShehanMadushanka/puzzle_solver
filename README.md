@@ -1,4 +1,4 @@
-# puzzle_solvera# Sliding Puzzle Solver Project
+# Sliding Puzzle Solver Project
 
 ## Project Overview
 This project involves creating a Python script to automatically solve a sliding puzzle using Selenium for web automation. The script captures the initial state of the puzzle, calculates the solution, and then automates the moves in the web browser.
