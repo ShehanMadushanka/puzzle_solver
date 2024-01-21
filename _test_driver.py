@@ -2,46 +2,83 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import ElementClickInterceptedException
 import numpy as np
 import cv2
-import time
-import pytesseract
+import time as t
 
+# Function to initialize the Chrome WebDriver
+def initialize_driver():
+    # Specify the path to chromedriver.exe (downloaded above)
+    chrome_driver_path = 'chromedriver/chromedriver'    
+    # Set up the Chrome WebDriver
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(chrome_driver_path, options=options)
+    # Open the webpage with the puzzle
+    driver.get('https://www.helpfulgames.com/subjects/brain-training/sliding-puzzle.html')
+    # Wait for the cookies dialog to appear and accept cookies
+    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'css-fm0uhk'))).click()
+    
+    # XPath for the puzzle select button
+    xpath_for_puzzle_select_button = "//button[@name='level'][@value='0']"
 
-# Set the path to the tesseract executable
-# If you're on Windows, it will be something like 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-# On Linux, it's usually just 'tesseract'
-pytesseract.pytesseract.tesseract_cmd = 'tesseract'
+    # Wait for the element to be present in the DOM
+    puzzle_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath_for_puzzle_select_button)))
+    
+    # Check if the button is visible, if not, execute JavaScript to click
+    if puzzle_button.is_displayed():
+        puzzle_button.click()
+    else:
+        driver.execute_script("arguments[0].click();", puzzle_button)
+    
+    return driver
 
-# Specify the path to chromedriver.exe (downloaded above)
-chrome_driver_path = 'chromedriver/chromedriver'
+driver = initialize_driver()
 
-# Set up the Chrome WebDriver
-options = webdriver.ChromeOptions()
-driver = webdriver.Chrome(chrome_driver_path, options=options)
+t.sleep(3)
 
-# Open the webpage with the puzzle
-driver.get('https://www.helpfulgames.com/subjects/brain-training/sliding-puzzle.html')
+def get_xpath(driver, element):
+    js_script = '''
+    function getElementXPath(element) {
+        if (element.id !== '') {
+            return 'id("' + element.id + '")';
+        }
+        if (element === document.body) {
+            return element.tagName;
+        }
+        var index = 0;
+        var siblings = element.parentNode.childNodes;
+        for (var i = 0; i < siblings.length; i++) {
+            var sibling = siblings[i];
+            if (sibling === element) {
+                return getElementXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (index + 1) + ']';
+            }
+            if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+                index++;
+            }
+        }
+    }
+    return getElementXPath(arguments[0]);
+    '''
+    return driver.execute_script(js_script, element)
 
-# Wait for the cookies dialog to appear and accept cookies
-WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'css-fm0uhk'))).click()
+def capture_initial_xpaths(driver):
+    initial_xpaths = {}
+    for i in range(9):  # Loop from 0 to 8
+        pieces = driver.find_elements(By.CSS_SELECTOR, f'div[current="{i}"]')
+        if pieces:
+            piece_xpath = get_xpath(driver, pieces[0])
+            initial_xpaths[i+1] = piece_xpath
+            
+    print("Initial XPaths:", initial_xpaths)
+    return initial_xpaths
 
-# XPath for the puzzle select button
-xpath_for_puzzle_select_button = "//button[@name='level'][@value='0']"
+initial_xpaths = capture_initial_xpaths(driver)
 
-# Wait for the element to be present in the DOM
-puzzle_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath_for_puzzle_select_button)))
-
-# Check if the button is visible, if not, execute JavaScript to click
-if puzzle_button.is_displayed():
-    puzzle_button.click()
-else:
-    driver.execute_script("arguments[0].click();", puzzle_button)
-
-time.sleep(3)
-
-# At this point, you can add code to take a screenshot or interact with the puzzle
-driver.save_screenshot('full_page_screenshot.png')
+def capture_screenshot():
+    # At this point, you can add code to take a screenshot or interact with the puzzle
+    driver.save_screenshot('full_page_screenshot.png')
 
 # Load the screenshot
 screenshot_path = 'full_page_screenshot.png'  # Update this to the path of your screenshot
@@ -96,42 +133,6 @@ def is_empty_space(piece_img, threshold):
 def display_piece_with_std_dev(piece_img, std_dev, title):
     cv2.imshow(title, piece_img)
     print(f"{title} - Standard Deviation: {std_dev}")
-
-# # Analyze each piece in the grid
-# piece_number = 1
-# for row in range(3):
-#     for col in range(3):
-#         # Calculate the top-left corner of the current piece
-#         x = puzzle_x + col * piece_width
-#         y = puzzle_y + row * piece_height
-#         # Extract the piece image
-#         piece_img = image[y:y+piece_height, x:x+piece_width]
-        
-#         # Check if this piece is the empty space
-#         if is_empty_space(piece_img, threshold):
-#             state_matrix[row][col] = 0
-#         else:
-#             state_matrix[row][col] = piece_number
-#             piece_number += 1
-
-# Print the state matrix and piece positions
-# print("State Matrix:")
-# for row in state_matrix:
-#     print(' '.join(str(cell) for cell in row))
-    
-# # Analyze and display each piece in the grid
-# for row in range(3):
-#     for col in range(3):
-#         x = puzzle_x + col * piece_width
-#         y = puzzle_y + row * piece_height
-#         piece_img = image[y:y+piece_height, x:x+piece_width]
-#         std_dev = np.std(cv2.cvtColor(piece_img, cv2.COLOR_BGR2GRAY))
-#         title = f"Piece {row},{col}"
-#         display_piece_with_std_dev(piece_img, std_dev, title)
-
-# # Wait for a key press to close the windows
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
 
 """This is the part where the number detection code goes. You can use the code from the previous section to extract the number regions from the screenshot."""
 
@@ -203,23 +204,6 @@ for row in range(3):
             state_matrix[row][col] = int(detected_number)
         else:
             state_matrix[row][col] = 0
-            
-# Iterate over each puzzle piece position to display the number region
-# for row in range(3):
-#     for col in range(3):
-#         # Calculate the top-left corner of the current piece
-#         x = puzzle_x + col * piece_width
-#         y = puzzle_y + row * piece_height
-
-#         # Crop the full puzzle image to get the current piece's number region
-#         number_region = image[y:y + number_height, x:x + number_width]
-
-#         # Display the cropped number region
-#         cv2.imshow(f'Number Region {row},{col}', number_region)
-
-# # Wait for a key press to close the windows
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
 
 # Print the state matrix
 for row in state_matrix:
@@ -230,8 +214,10 @@ for row in state_matrix:
 
 import heapq
 
+INITIAL_STATE = state_matrix.copy()
+
 # The current state of the puzzle
-current_state = state_matrix
+current_state = state_matrix.copy()
 
 # The goal state of the puzzle
 goal_state = [
@@ -304,38 +290,108 @@ def a_star_search(start, goal):
 
     return None  # Return None if no solution is found
 
-# Example usage
 solution_path = a_star_search(current_state, goal_state)
-# if solution_path:
-#     print("Solution Path:", solution_path)
-# else:
-#     print("No solution found.")
+if solution_path:
+    print("Solution Path:", solution_path)
+else:
+    print("No solution found.")
+
+def start_moving():
+    global current_state
+    for move in solution_path:
+        empty_row, empty_col = find_empty_space_position(current_state)
+
+        if move == 'left':
+            piece_row, piece_col = empty_row, empty_col - 1
+        elif move == 'right':
+            piece_row, piece_col = empty_row, empty_col + 1
+        elif move == 'up':
+            piece_row, piece_col = empty_row - 1, empty_col
+        elif move == 'down':
+            piece_row, piece_col = empty_row + 1, empty_col
+
+        # Make sure the piece position is within the grid bounds
+        if 0 <= piece_row < 3 and 0 <= piece_col < 3:
+            print(f"Moving piece {current_state[piece_row][piece_col]} {move}")
+            # Find the number of the piece at that position
+            piece_number = current_state[piece_row][piece_col]
+            
+            print(f"Inital State: {INITIAL_STATE}")
+            
+            piece_position = find_position_number(INITIAL_STATE, piece_number)
+            # Find the initial XPath of that piece
+            piece_xpath = initial_xpaths.get(piece_position)
+            # Click on the piece using its XPath
+            if piece_xpath:
+                click_piece_by_xpath(driver, piece_xpath)
+                # Optionally, add a short delay for the browser to process the move
+                t.sleep(5)
+            
+        # Update current_state after each move
+        current_state = update_state(current_state, move)
+        print(f"Curent State: {current_state}")
+        
+def find_position_number(grid, target):
+    for row_index, row in enumerate(grid):
+        if target in row:
+            col_index = row.index(target)
+            # Calculate position number (row major order)
+            position_number = row_index * len(row) + col_index + 1
+            return position_number
+    return -1  # Return -1 if the target is not found
     
-# def apply_move(state, move):
-#     new_state = [row[:] for row in state]  # Deep copy of the state
-#     row, col = next((r, c) for r in range(3) for c in range(3) if state[r][c] == 0)
+def find_empty_space_position(state):
+    # Find the position (row and column) of the empty space (0)
+    for row in range(3):
+        for col in range(3):
+            if state[row][col] == 0:
+                return row, col
+    return None
 
-#     if move == 'up':
-#         new_state[row][col], new_state[row-1][col] = new_state[row-1][col], new_state[row][col]
-#     elif move == 'down':
-#         new_state[row][col], new_state[row+1][col] = new_state[row+1][col], new_state[row][col]
-#     elif move == 'left':
-#         new_state[row][col], new_state[row][col-1] = new_state[row][col-1], new_state[row][col]
-#     elif move == 'right':
-#         new_state[row][col], new_state[row][col+1] = new_state[row][col+1], new_state[row][col]
+def update_state(state, move):
+    row, col = next((r, c) for r in range(3) for c in range(3) if state[r][c] == 0)
 
-#     return new_state
+    if move == 'up':
+        state[row][col], state[row-1][col] = state[row-1][col], state[row][col]
+    elif move == 'down':
+        state[row][col], state[row+1][col] = state[row+1][col], state[row][col]
+    elif move == 'left':
+        state[row][col], state[row][col-1] = state[row][col-1], state[row][col]
+    elif move == 'right':
+        state[row][col], state[row][col+1] = state[row][col+1], state[row][col]
+
+    return state
 
 
-# # Apply the moves
-# for move in solution_path:
-#     current_state = apply_move(current_state, move)
+def click_piece_by_xpath(driver, xpath):
+    attempts = 0
+    while attempts < 3:  # Retry up to 3 times
+        try:
+            piece = driver.find_element(By.XPATH, xpath)
+            piece.click()
+            break  # If click is successful, break out of the loop
+        except ElementClickInterceptedException:
+            t.sleep(1)  # Wait for 1 second before retrying
+            attempts += 1
 
-# is_solved = current_state == goal_state
-# print("Final State:")
-# for row in current_state:
-#     print(row)
-# print("\nIs the puzzle solved?", is_solved)
 
 # Close the browser
 # driver.quit()
+
+
+# Iterate over each puzzle piece position to display the number region
+# for row in range(3):
+#     for col in range(3):
+#         # Calculate the top-left corner of the current piece
+#         x = puzzle_x + col * piece_width
+#         y = puzzle_y + row * piece_height
+
+#         # Crop the full puzzle image to get the current piece's number region
+#         number_region = image[y:y + number_height, x:x + number_width]
+
+#         # Display the cropped number region
+#         cv2.imshow(f'Number Region {row},{col}', number_region)
+
+# # Wait for a key press to close the windows
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
