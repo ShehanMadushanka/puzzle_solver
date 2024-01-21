@@ -1,7 +1,8 @@
+
 # Sliding Puzzle Solver Project
 
 ## Project Overview
-This project involves creating a Python script to automatically solve a sliding puzzle using Selenium for web automation. The script captures the initial state of the puzzle, calculates the solution, and then automates the moves in the web browser.
+This project involves creating a Python script to automatically solve a sliding puzzle on 'https://www.helpfulgames.com/subjects/brain-training/sliding-puzzle.html' using Selenium for web automation. The script captures the initial state of the puzzle, calculates the solution, and then automates the moves in the web browser.
 
 ## Key Components
 - **Selenium WebDriver**: Automates web browser interaction.
@@ -16,10 +17,13 @@ This project involves creating a Python script to automatically solve a sliding 
 
 ## Code Structure
 - `_main.py`: Contains the main logic to initialize the WebDriver, capture the initial state, and start the puzzle-solving process.
-- `_test_driver.py`: Includes the implementation of the puzzle-solving algorithm and functions to interact with the web page.
+- `_automation.py`: Includes the implementation of the puzzle-solving algorithm and functions to interact with the web page.
 
 ## Running the Project
 To run the project, execute the `_main.py` script. Ensure that all dependencies, including Selenium and the appropriate WebDriver, are installed and configured correctly.
+
+## Target Website
+The puzzle solver is designed to automate solving puzzles on 'https://www.helpfulgames.com/subjects/brain-training/sliding-puzzle.html'.
 
 ## Future Enhancements
 - **Improved Algorithm**: Enhance the puzzle-solving algorithm for efficiency or to handle more complex puzzles.
